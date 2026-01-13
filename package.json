@@ -7,13 +7,21 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon server/index.js",
     "client": "cd client && npm start",
-    "build": "cd client && npm run build",
+    "build": "cd client && npm install && npm run build",
     "install-client": "cd client && npm install",
     "install-server": "npm install",
     "install-all": "npm run install-server && npm run install-client",
     "start": "node server/index.js"
   },
-  "keywords": ["pomodoro", "timer", "productivity", "react", "nodejs", "express", "mongodb"],
+  "keywords": [
+    "pomodoro",
+    "timer",
+    "productivity",
+    "react",
+    "nodejs",
+    "express",
+    "mongodb"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
@@ -31,4 +39,4 @@
     "nodemon": "^3.0.1",
     "concurrently": "^8.2.0"
   }
-} 
+}
