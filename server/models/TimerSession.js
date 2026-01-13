@@ -27,6 +27,14 @@ const timerSessionSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isRunning: {
+    type: Boolean,
+    default: true
+  },
+  timeLeft: {
+    type: Number, // In seconds
+    default: null
+  },
   task: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Task'
@@ -49,7 +57,7 @@ timerSessionSchema.index({ user: 1, startTime: -1 });
 timerSessionSchema.index({ user: 1, type: 1, startTime: -1 });
 
 // Virtual for session duration
-timerSessionSchema.virtual('actualDuration').get(function() {
+timerSessionSchema.virtual('actualDuration').get(function () {
   if (this.endTime && this.startTime) {
     return Math.round((this.endTime - this.startTime) / 1000 / 60); // Duration in minutes
   }

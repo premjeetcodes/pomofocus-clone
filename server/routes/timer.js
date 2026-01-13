@@ -29,7 +29,9 @@ router.post('/start', auth, [
     });
 
     if (activeSession) {
-      return res.status(400).json({ message: 'There is already an active timer session' });
+      activeSession.endTime = new Date();
+      activeSession.completed = true;
+      await activeSession.save();
     }
 
     const session = new TimerSession({
@@ -79,6 +81,79 @@ router.post('/complete/:id', auth, async (req, res) => {
     res.json(session);
   } catch (error) {
     console.error('Complete timer error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Pause timer session
+router.post('/pause', auth, async (req, res) => {
+  try {
+    const session = await TimerSession.findOne({
+      user: req.user._id,
+      completed: false
+    });
+
+    if (!session) {
+      return res.status(404).json({ message: 'No active session found' });
+    }
+
+    if (!session.isRunning) {
+      return res.status(400).json({ message: 'Timer is already paused' });
+    }
+
+    const now = new Date();
+    const elapsedTime = Math.floor((now - session.startTime) / 1000); // seconds
+    const totalDurationSeconds = session.duration * 60;
+    const timeLeft = Math.max(0, totalDurationSeconds - elapsedTime);
+
+    session.isRunning = false;
+    session.timeLeft = timeLeft;
+    await session.save();
+
+    res.json(session);
+  } catch (error) {
+    console.error('Pause timer error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Resume timer session
+router.post('/resume', auth, async (req, res) => {
+  try {
+    const session = await TimerSession.findOne({
+      user: req.user._id,
+      completed: false
+    });
+
+    if (!session) {
+      return res.status(404).json({ message: 'No active session found' });
+    }
+
+    if (session.isRunning) {
+      return res.status(400).json({ message: 'Timer is already running' });
+    }
+
+    // Recalculate start time so that "now - startTime" equals the active duration passed
+    // We want: duration * 60 - (now - newStartTime) / 1000 = timeLeft
+    // So: (now - newStartTime) / 1000 = duration * 60 - timeLeft
+    // newStartTime = now - (duration * 60 - timeLeft) * 1000
+
+    if (session.timeLeft === null || session.timeLeft === undefined) {
+      // Fallback if timeLeft wasn't saved properly, though it should be
+      session.timeLeft = session.duration * 60;
+    }
+
+    const now = new Date();
+    const elapsedSecondsBeforePause = (session.duration * 60) - session.timeLeft;
+    session.startTime = new Date(now.getTime() - (elapsedSecondsBeforePause * 1000));
+
+    session.isRunning = true;
+    session.timeLeft = null; // Clear it as it's running now
+    await session.save();
+
+    res.json(session);
+  } catch (error) {
+    console.error('Resume timer error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

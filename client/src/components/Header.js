@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  CheckCircle, 
-  BarChart3, 
-  Settings, 
-  User, 
-  LogOut, 
+import {
+  CheckCircle,
+  BarChart3,
+  Settings,
+  User,
+  LogOut,
   Crown,
   Keyboard,
   Trash2,
@@ -25,7 +25,7 @@ const Header = () => {
   };
 
   const userMenuItems = [
-    { icon: User, label: 'Account', action: () => setShowUserMenu(false) },
+    { icon: User, label: 'Profile', action: () => { navigate('/profile'); setShowUserMenu(false); } },
     { icon: Crown, label: 'Premium', action: () => setShowUserMenu(false) },
     { icon: LogOut, label: 'Logout', action: handleLogout },
     { icon: Keyboard, label: 'Shortcuts', action: () => setShowUserMenu(false) },
@@ -49,8 +49,8 @@ const Header = () => {
           {/* Navigation */}
           <div className="flex items-center space-x-4">
             {/* Report Button */}
-            <Link 
-              to="/reports" 
+            <Link
+              to="/reports"
               className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
             >
               <BarChart3 className="w-5 h-5" />
@@ -58,8 +58,8 @@ const Header = () => {
             </Link>
 
             {/* Settings Button */}
-            <Link 
-              to="/settings" 
+            <Link
+              to="/settings"
               className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
             >
               <Settings className="w-5 h-5" />
@@ -102,8 +102,8 @@ const Header = () => {
 
       {/* Click outside to close menu */}
       {showUserMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setShowUserMenu(false)}
         />
       )}

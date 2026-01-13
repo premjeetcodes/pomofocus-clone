@@ -32,11 +32,18 @@ export const TimerProvider = ({ children }) => {
     if (isRunning) return;
 
     try {
-      const response = await axios.post('/api/timer/start', {
-        type: timerType,
-        duration: Math.floor(timeLeft / 60), // Convert to minutes
-        project: 'No Project' // You can make this dynamic
-      });
+      let response;
+      if (currentSession) {
+        // Resume existing session
+        response = await axios.post('/api/timer/resume');
+      } else {
+        // Start new session
+        response = await axios.post('/api/timer/start', {
+          type: timerType,
+          duration: Math.floor(timeLeft / 60), // Convert to minutes
+          project: 'No Project' // You can make this dynamic
+        });
+      }
 
       setCurrentSession(response.data);
       setIsRunning(true);
@@ -48,19 +55,25 @@ export const TimerProvider = ({ children }) => {
   };
 
   // Pause timer
-  const pauseTimer = () => {
+  const pauseTimer = async () => {
     setIsRunning(false);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    toast.success('Timer paused');
+
+    try {
+      await axios.post('/api/timer/pause');
+      toast.success('Timer paused');
+    } catch (error) {
+      console.error('Failed to pause timer:', error);
+    }
   };
 
   // Stop timer
   const stopTimer = async () => {
     setIsRunning(false);
     setTimeLeft(timerTypes[timerType].duration);
-    
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
@@ -105,7 +118,7 @@ export const TimerProvider = ({ children }) => {
             // Timer finished
             clearInterval(intervalRef.current);
             setIsRunning(false);
-            
+
             // Play notification sound
             if (Notification.permission === 'granted') {
               new Notification('Pomofocus', {
@@ -162,10 +175,33 @@ export const TimerProvider = ({ children }) => {
       try {
         const response = await axios.get('/api/timer/active');
         if (response.data) {
-          setCurrentSession(response.data);
-          setTimerType(response.data.type);
-          setTimeLeft(response.data.duration * 60);
-          setIsRunning(false); // Don't auto-start, let user decide
+          const session = response.data;
+          setCurrentSession(session);
+          setTimerType(session.type);
+
+          if (session.isRunning) {
+            const startTime = new Date(session.startTime);
+            const currentTime = new Date();
+            const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+            const durationSeconds = session.duration * 60;
+            const remainingSeconds = durationSeconds - elapsedSeconds;
+
+            if (remainingSeconds > 0) {
+              setTimeLeft(remainingSeconds);
+              setIsRunning(true);
+            } else {
+              setTimeLeft(0);
+              setIsRunning(false);
+            }
+          } else {
+            // Paused session
+            if (session.timeLeft !== undefined && session.timeLeft !== null) {
+              setTimeLeft(session.timeLeft);
+            } else {
+              setTimeLeft(session.duration * 60);
+            }
+            setIsRunning(false);
+          }
         }
       } catch (error) {
         console.error('Failed to check active session:', error);
