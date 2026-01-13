@@ -28,20 +28,31 @@ const connectDB = async () => {
     return;
   }
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pomofocus', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/pomofocus';
+    // Removed deprecated options as they are default in Mongoose 6+ and can cause issues
+    await mongoose.connect(uri);
     console.log('Connected to MongoDB');
   } catch (err) {
     console.error('MongoDB connection error:', err);
+    throw err; // Rethrow to handle in middleware
   }
 };
 
 // Middleware to ensure DB is connected before handling requests
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  if (req.path === '/api/test') return next(); // Skip for health check
+
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    res.status(500).json({
+      message: 'Database connection failed',
+      error: error.message,
+      // Only show full stack in dev
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
 });
 
 // Routes
@@ -50,6 +61,26 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/timer', timerRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
+
+// Health Check / Debug Route
+app.get('/api/test', async (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    env: {
+      node_env: process.env.NODE_ENV,
+      mongo_uri_configured: !!process.env.MONGODB_URI,
+    },
+    db_status: mongoose.connection.readyState,
+    db_states: {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting',
+      3: 'disconnecting',
+    }
+  });
+});
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
